@@ -20,7 +20,9 @@ BMgr::BMgr(){
 
     init_free_list();   //add all frames to free list
 
-    init_LRU();
+    replace_alg = &LRU_replace_alg;
+    replace_alg->init();
+    printf("Use: %s\n", replace_alg->name);
 
     //init statistic
     access_total = 0;
@@ -40,7 +42,7 @@ int BMgr::accessPage(int page_id, int type){
             bcb_ptr->dirty = 1; //set dirty
             write++;
         }
-        update_LRU(bcb_ptr, 0);
+        replace_alg->update(bcb_ptr, 0);
         hit++;
         return bcb_ptr->frame_id;
     }
@@ -50,7 +52,7 @@ int BMgr::accessPage(int page_id, int type){
     int from_free = !(bcb_ptr==NULL);
     if(bcb_ptr==NULL){
         //select victim
-        bcb_ptr = select_victim();
+        bcb_ptr = replace_alg->select_victim();
         //check dirty
         if(bcb_ptr->dirty){
             /*
@@ -76,7 +78,7 @@ int BMgr::accessPage(int page_id, int type){
     }
     bcb_ptr->page_id = page_id;
 
-    update_LRU(bcb_ptr, from_free);
+    replace_alg->update(bcb_ptr, from_free);
     hash_insert(bcb_ptr);
 
     return bcb_ptr->frame_id;
@@ -113,37 +115,6 @@ BCB *BMgr::get_free(){
         free_list = free_list->free_next;
         return bcb_ptr;
     }
-}
-
-BCB *BMgr::select_victim(){
-    return LRU_head->LRU_prev;
-}
-
-void BMgr::init_LRU(){
-    LRU_head = new BCB;    //init LRU list to be empty. empty head simplify discussion
-    LRU_head->LRU_next = LRU_head->LRU_prev = LRU_head;
-    LRU_head->frame_id = -1;
-}
-
-void BMgr::update_LRU(BCB *bcb_ptr, int from_free){
-    if(from_free==1){
-        lru_link_insert_head(bcb_ptr); //insert bcb_ptr to the head
-    }else{
-        lru_link_delete(bcb_ptr);
-        lru_link_insert_head(bcb_ptr); //insert bcb_ptr to the head
-    }
-}
-
-void BMgr::lru_link_delete(BCB *bcb_ptr){
-    bcb_ptr->LRU_next->LRU_prev = bcb_ptr->LRU_prev;
-    bcb_ptr->LRU_prev->LRU_next = bcb_ptr->LRU_next;
-}
-
-void BMgr::lru_link_insert_head(BCB *bcb_ptr){
-    bcb_ptr->LRU_prev = LRU_head;
-    bcb_ptr->LRU_next = LRU_head->LRU_next;
-    LRU_head->LRU_next->LRU_prev = bcb_ptr;
-    LRU_head->LRU_next = bcb_ptr;
 }
 
 BCB *BMgr::hash_search(int page_id){

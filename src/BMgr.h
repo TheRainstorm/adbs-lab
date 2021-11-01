@@ -1,31 +1,7 @@
 #ifndef BMGR_H
 #define BMGR_H
-
-#define FRAMESIZE 4096
-#define DEFBUFSIZE 1024
-
-typedef struct bFrame
-{
-    char field[FRAMESIZE];
-} bFrame;
-
-//control infomation
-typedef struct BCB
-{
-    int page_id;
-    int frame_id;
-    int latch;
-    int count;
-    int dirty;
-    struct BCB *next;       //hash table
-    struct BCB *free_next;  //free list
-    struct BCB *LRU_prev;   //LRU list(double linked list)
-    struct BCB *LRU_next;
-    char clock_bit;         //clock replacement algrothim
-} BCB;
-
-// extern bFrame buf[DEFBUFSIZE]; //store the frames
-// extern BCB buf_bcb[DEFBUFSIZE]; //store the bcbs
+#include "defines.h"
+#include "replace_alg.h"
 
 class BMgr
 {
@@ -45,13 +21,6 @@ public:
     void hash_insert(BCB *bcb_ptr);
     void hash_delete(BCB *bcb_ptr);
 
-    BCB *select_victim();
-    //LRU
-    void init_LRU();
-    void update_LRU(BCB *bcb_ptr, int from_free);
-    void lru_link_delete(BCB *bcb_ptr);
-    void lru_link_insert_head(BCB *bcb_ptr);
-    
     //help
     void print_statistical_data();
 
@@ -74,8 +43,9 @@ private:
     // Hash Table
     // int ftop[DEFBUFSIZE];
     BCB *ptof[DEFBUFSIZE];
-    BCB *LRU_head;
     BCB *free_list;
+
+    const struct replace_alg *replace_alg;
 public:
     int access_total;
     int hit;

@@ -9,6 +9,7 @@
                 "-g",
                 "${file}",
                 "BMgr.cpp",
+                "replace_LRU.c",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],
