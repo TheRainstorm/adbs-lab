@@ -25,6 +25,6 @@ typedef struct BCB
 } BCB;
 
 // extern bFrame buf[DEFBUFSIZE]; //store the frames
-// extern BCB buf_bcb[DEFBUFSIZE]; //store the bcbs
+extern BCB buf_bcb[DEFBUFSIZE]; //store the bcbs
 
 #endif

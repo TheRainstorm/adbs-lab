@@ -20,7 +20,8 @@ BMgr::BMgr(){
 
     init_free_list();   //add all frames to free list
 
-    replace_alg = &LRU_replace_alg;
+    // replace_alg = &LRU_replace_alg;
+    replace_alg = &Clock_replace_alg;
     replace_alg->init();
     printf("Use: %s\n", replace_alg->name);
 

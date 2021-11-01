@@ -1,0 +1,35 @@
+#include "replace_alg.h"
+#include "defines.h"
+#include <stdlib.h>
+//global variable
+int Clock_current;
+
+static void init(){
+    Clock_current=0;
+    for(int i=0; i<DEFBUFSIZE; i++){
+        buf_bcb[i].clock_bit=0;
+    }
+}
+
+static void update(BCB *bcb_ptr, int from_free){
+    bcb_ptr->clock_bit=1;    //1 means have been accessed recently
+}
+
+static BCB *select_victim(){
+    BCB * bcb_ptr;
+    while(1){
+        bcb_ptr = &buf_bcb[Clock_current];
+        if(bcb_ptr->clock_bit==0){
+            return bcb_ptr;
+        }
+        bcb_ptr->clock_bit = 0;
+        Clock_current = (Clock_current+1)%DEFBUFSIZE;
+    }
+}
+
+const struct replace_alg Clock_replace_alg = {
+    .name = "Clock",
+    .init = init,
+    .update = update,
+    .select_victim = select_victim,
+};

@@ -10,6 +10,7 @@
                 "${file}",
                 "BMgr.cpp",
                 "replace_LRU.c",
+                "replace_Clock.c",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],

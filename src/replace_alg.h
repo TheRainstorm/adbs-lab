@@ -10,6 +10,6 @@ struct replace_alg {
 };
 
 extern const struct replace_alg LRU_replace_alg;
-// extern const struct replace_alg *Clock_replace_alg;
+extern const struct replace_alg Clock_replace_alg;
 
 #endif
