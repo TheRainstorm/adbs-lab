@@ -12,16 +12,24 @@ unsigned int _hash(unsigned int x){
     return x;
 }
 
-BMgr::BMgr(){
+BMgr::BMgr(int alg){
     //init hash table
     memset(ptof, NULL, DEFBUFSIZE*sizeof(BCB *)); //init hash table to be empty
 
     init_bcb();
 
     init_free_list();   //add all frames to free list
-
-    // replace_alg = &LRU_replace_alg;
-    replace_alg = &Clock_replace_alg;
+    
+    switch (alg){
+        case 0:
+            replace_alg = &LRU_replace_alg;
+            break;
+        case 1:
+            replace_alg = &Clock_replace_alg;
+        default:
+            break;
+    }
+    
     replace_alg->init();
     printf("Use: %s\n", replace_alg->name);
 
@@ -29,6 +37,11 @@ BMgr::BMgr(){
     access_total = 0;
     hit = 0;
     write = 0;
+    write_io = read_io = 0;
+}
+BMgr::~BMgr(){
+    // replace_alg->release();
+    clear_buffer();
 }
 
 int BMgr::accessPage(int page_id, int type){
@@ -38,7 +51,8 @@ int BMgr::accessPage(int page_id, int type){
     if(bcb_ptr!=NULL){  //hit!
         //Update dirty
         if(type==1){
-            /**write to buffer
+            /**
+             * write to buffer
              */
             bcb_ptr->dirty = 1; //set dirty
             write++;
@@ -56,25 +70,28 @@ int BMgr::accessPage(int page_id, int type){
         bcb_ptr = replace_alg->select_victim();
         //check dirty
         if(bcb_ptr->dirty){
-            /*
-            call Disk manager to write back page
-            writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
+            /** 
+             * call Disk manager to write back page
+             * writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
             */
+           write_io++;
            bcb_ptr->dirty=0;
         }
         hash_delete(bcb_ptr);   //delete original page_id to frame_id hash map
     }
 
     if(type==1){
-        /**write to buffer
+        /** 
+         * write to buffer
          */
         bcb_ptr->dirty = 1; //set dirty
         write++;
     }else{
-        /* 
-        call Disk manager to read page, and write to buffer
-        read(page_id, bcb[bcb_ptr->frame_id])
+        /** 
+         * call Disk manager to read page, and write to buffer
+         * read(page_id, bcb[bcb_ptr->frame_id])
         */
+       read_io++;
        ;
     }
     bcb_ptr->page_id = page_id;
@@ -83,6 +100,17 @@ int BMgr::accessPage(int page_id, int type){
     hash_insert(bcb_ptr);
 
     return bcb_ptr->frame_id;
+}
+
+void BMgr::clear_buffer(){
+    for(int i=0; i<DEFBUFSIZE; i++){
+        if(buf_bcb[i].dirty==1){
+            /** 
+             * call Disk manager to write back page
+             * writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
+            */
+        }
+    }
 }
 
 void BMgr::init_bcb(){
@@ -166,4 +194,6 @@ void BMgr::print_statistical_data(){
     printf("total: %d\n", access_total);
     printf("hit rate: %f\n", (float)hit/access_total);
     printf("write rate: %f\n", (float)write/access_total);
+    printf("read_io: %d\n", read_io);
+    printf("write_io: %d\n", write_io);
 }

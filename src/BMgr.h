@@ -6,10 +6,12 @@
 class BMgr
 {
 public:
-    BMgr(); //init
+    BMgr(int alg); //init
+    ~BMgr();
 
     //interface
     int accessPage(int page_id, int type);  //type: 0 read, 1 write
+    void clear_buffer();
 
     //internal
     void init_bcb();
@@ -50,6 +52,7 @@ public:
     int access_total;
     int hit;
     int write;
+    int read_io, write_io;
 };
 
 #endif

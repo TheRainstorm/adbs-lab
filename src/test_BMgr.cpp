@@ -10,15 +10,21 @@ int main(){
         exit(1);
     }
 
-    BMgr bmgr;
     int type, page_id;
-    int cnt=0;
+
+    BMgr bmgr(0);
+    fseek(fp, 0, SEEK_SET);
     while((fscanf(fp, "%d,%d", &type, &page_id))==2){
         bmgr.accessPage(page_id, type);
-        // printf("cnt: %d\n", cnt);
-        cnt++;
     }
     bmgr.print_statistical_data();
+
+    BMgr bmgr2(1);
+    fseek(fp, 0, SEEK_SET);
+    while((fscanf(fp, "%d,%d", &type, &page_id))==2){
+        bmgr2.accessPage(page_id, type);
+    }
+    bmgr2.print_statistical_data();
 
     return 0;
 }
