@@ -1,6 +1,6 @@
 #include "replace_alg.h"
 #include "defines.h"
-#include <stdlib.h>
+
 //global variable
 int Clock_current;
 
@@ -16,10 +16,12 @@ static void update(BCB *bcb_ptr, int from_free){
 }
 
 static BCB *select_victim(){
+    int cnt=0;
     BCB * bcb_ptr;
     while(1){
         bcb_ptr = &buf_bcb[Clock_current];
-        if(bcb_ptr->clock_bit==0){
+        if(bcb_ptr->clock_bit==0 || cnt++>=10){
+            Clock_current = (Clock_current+1)%DEFBUFSIZE;
             return bcb_ptr;
         }
         bcb_ptr->clock_bit = 0;

@@ -35,6 +35,7 @@ int main(){
         bmgr3.accessPage(page_id, type);
     }
     bmgr3.print_statistical_data();
-
+    
+    fclose(fp);
     return 0;
 }
