@@ -11,6 +11,7 @@
                 "BMgr.cpp",
                 "replace_LRU.c",
                 "replace_Clock.c",
+                "replace_random.c",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],

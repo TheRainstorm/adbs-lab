@@ -6,9 +6,9 @@
 BCB buf_bcb[DEFBUFSIZE]; //store the bcbs
 
 unsigned int _hash(unsigned int x){
-    // x = ((x >> 16) ^ x) * 0x45d9f3b;
-    // x = ((x >> 16) ^ x) * 0x45d9f3b;
-    // x = (x >> 16) ^ x;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
     return x;
 }
 
@@ -26,6 +26,10 @@ BMgr::BMgr(int alg){
             break;
         case 1:
             replace_alg = &Clock_replace_alg;
+            break;
+        case 2:
+            replace_alg = &Random_replace_alg;
+            break;
         default:
             break;
     }
