@@ -1,7 +1,9 @@
+.vscode
+
 src/no use
 *.txt
 !data-5w-50w-zipf.txt
-*.rar
 
+*.rar
 *.exe
 *.o
