@@ -37,18 +37,20 @@ int DSMgr::Seek(int offset, int pos){
 }
 
 void DSMgr::ReadPage(int page_id, bFrame *frm){
-    if (Seek(page_id * PAGE_SIZE, SEEK_SET)) {
+    if(page_id > num_pages){
         fprintf(stderr, "Error: DSMgr ReadPage cannot find page: %d\n", page_id);
         exit(1);
     }
+    Seek(page_id * PAGE_SIZE, SEEK_SET);
     fread((void *)frm, 1, PAGE_SIZE, curr_file);
 }
 
 void DSMgr::WritePage(int page_id, bFrame *frm){
-    if (Seek(page_id * PAGE_SIZE, SEEK_SET)) {
+    if(page_id > num_pages){
         fprintf(stderr, "Error: DSMgr WritePage cannot find page: %d\n", page_id);
         exit(1);
     }
+    Seek(page_id * PAGE_SIZE, SEEK_SET);
     fwrite((void *)frm, 1, PAGE_SIZE, curr_file);
 }
 

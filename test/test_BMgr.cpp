@@ -37,10 +37,16 @@ int main(int argc, char *argv[]){
     int type, page_id;
     int cnt = 0;
 
+    //创建50000个页的文件
+    for(int i=0; i<50000; i++){
+        bmgr->FixNewPage(&page_id);     //创建新页，需要写入文件
+        bmgr->UnfixPage(page_id);       //删除后，页只存在文件中，不存在于buffer中
+    }
+
     long t = -clock();
     fseek(fp, 0, SEEK_SET);
     while((fscanf(fp, "%d,%d", &type, &page_id))==2){
-        bmgr->FixPage(page_id, type);
+        bmgr->FixPage(page_id, type);   //访问页
         // printf("cnt: %d\n", cnt++);
     }
     t += clock();

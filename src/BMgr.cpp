@@ -118,6 +118,7 @@ int BMgr::UnfixPage(int page_id) {
     }
     if(bcb_ptr->pincount==0){
         hash_delete(bcb_ptr);
+        release_free(bcb_ptr);
     }else{
         bcb_ptr->pincount--;
     }
@@ -125,15 +126,15 @@ int BMgr::UnfixPage(int page_id) {
 }
 
 int BMgr::NumFreeFrames() {
-    BCB * ptr = free_list;
-    int cnt = 0;
-    while(ptr!=NULL){
-        cnt ++;
-        ptr = ptr->free_next;
-    }
-    return cnt;
+    // BCB * ptr = free_list;
+    // int cnt = 0;
+    // while(ptr!=NULL){
+    //     cnt ++;
+    //     ptr = ptr->free_next;
+    // }
+    // return cnt;
+    return free_frame_num;
 }
-
 
 void BMgr::clear_buffer(){
     for(int i=0; i<DEFBUFSIZE; i++){
@@ -186,11 +187,11 @@ void BMgr::init_bcb(){
 }
 
 void BMgr::init_free_list(){
-    for(int i=0; i<DEFBUFSIZE-1; i++){
-        buf_bcb[i].free_next = &buf_bcb[i+1];
+    free_frame_num = 0;
+    free_list = NULL;
+    for(int i=0; i<DEFBUFSIZE; i++){
+        release_free(&buf_bcb[i]);
     }
-    buf_bcb[DEFBUFSIZE-1].next=NULL;
-    free_list = &buf_bcb[0];
 }
 
 BCB *BMgr::get_free(){
@@ -199,8 +200,16 @@ BCB *BMgr::get_free(){
         return NULL;
     }else{
         free_list = free_list->free_next;
+        free_frame_num--;
         return bcb_ptr;
     }
+}
+
+void BMgr::release_free(BCB *bcb_ptr){
+    bcb_ptr->free_next = free_list;
+    free_list = bcb_ptr;
+
+    free_frame_num++;
 }
 
 BCB *BMgr::hash_search(int page_id){
