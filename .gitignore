@@ -8,3 +8,4 @@ src/no use
 *.exe
 *.o
 *.a
+*.dbf

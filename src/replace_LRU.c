@@ -22,8 +22,8 @@ void init_LRU(){
     LRU_head->frame_id = -1;
 }
 
-void update_LRU(BCB *bcb_ptr, int from_free){
-    if(from_free==1){
+void update_LRU(BCB *bcb_ptr, int is_free_frame){
+    if(is_free_frame==1){
         lru_link_insert_head(bcb_ptr); //insert bcb_ptr to the head
     }else{
         lru_link_delete(bcb_ptr);

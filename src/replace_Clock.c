@@ -11,7 +11,7 @@ static void init(){
     }
 }
 
-static void update(BCB *bcb_ptr, int from_free){
+static void update(BCB *bcb_ptr, int is_free_frame){
     bcb_ptr->clock_bit=1;    //1 means have been accessed recently
 }
 

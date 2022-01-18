@@ -6,7 +6,7 @@ static void init(){
     srand(2021);
 }
 
-static void update(BCB *bcb_ptr, int from_free){
+static void update(BCB *bcb_ptr, int is_free_frame){
     ;
 }
 

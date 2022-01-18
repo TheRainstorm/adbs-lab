@@ -1,9 +1,8 @@
 #include "BMgr.h"
-#include <stdio.h>
 #include <string.h>
 
-// bFrame buf[DEFBUFSIZE]; //store the frames
-BCB buf_bcb[DEFBUFSIZE]; //store the bcbs
+bFrame buf[DEFBUFSIZE];     //store the frames
+BCB buf_bcb[DEFBUFSIZE];    //store the bcbs
 
 unsigned int _hash(unsigned int x){
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -12,49 +11,46 @@ unsigned int _hash(unsigned int x){
     return x;
 }
 
-BMgr::BMgr(int alg){
-    //init hash table
-    memset(ptof, NULL, DEFBUFSIZE*sizeof(BCB *)); //init hash table to be empty
+BMgr::BMgr(std::string filename, int alg){
+    dsmgr = new DSMgr(filename);
 
-    init_bcb();
-
+    init_bcb();         //init bcb array
     init_free_list();   //add all frames to free list
+    memset(ptof, 0, DEFBUFSIZE*sizeof(BCB *)); //init hash table to be empty
     
+    //choose replace algorithm
     switch (alg){
-        case 0:
+        case LRU:
             replace_alg = &LRU_replace_alg;
             break;
-        case 1:
+        case Clock:
             replace_alg = &Clock_replace_alg;
             break;
-        case 2:
+        case Random:
             replace_alg = &Random_replace_alg;
             break;
         default:
-            break;
+            exit(1);
     }
-    
     replace_alg->init();
-    printf("Use: %s\n", replace_alg->name);
+    printf("Used Replace Alg: %s\n", replace_alg->name);
 
-    //init statistic
-    access_total = 0;
-    hit = 0;
-    write = 0;
-    write_io = read_io = 0;
+    init_statistical_data(); //init statistic
 }
+
 BMgr::~BMgr(){
-    // replace_alg->release();
+    delete dsmgr;
     clear_buffer();
 }
 
-int BMgr::accessPage(int page_id, int type){
-    access_total++;
+int BMgr::FixPage(int page_id, int type){
+    access_total++; //statistic
+
     //hit?
     BCB * bcb_ptr = hash_search(page_id);
     if(bcb_ptr!=NULL){  //hit!
-        //Update dirty
-        if(type==1){
+        hit++;
+        if(type==1){    //write
             /**
              * write to buffer
              */
@@ -62,27 +58,24 @@ int BMgr::accessPage(int page_id, int type){
             write++;
         }
         replace_alg->update(bcb_ptr, 0);
-        hit++;
         return bcb_ptr->frame_id;
     }
 
-    //free frame?
-    bcb_ptr = get_free();
-    int from_free = !(bcb_ptr==NULL);
-    if(bcb_ptr==NULL){
-        //select victim
-        bcb_ptr = replace_alg->select_victim();
-        //check dirty
-        if(bcb_ptr->dirty){
-            /** 
-             * call Disk manager to write back page
-             * writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
-            */
-           write_io++;
-           bcb_ptr->dirty=0;
-        }
-        hash_delete(bcb_ptr);   //delete original page_id to frame_id hash map
-    }
+    /*no hit
+    1. check if there is free frame
+        1. if no
+            1. **select victim frame**
+            2. writeback (when dirty)
+    2. now we get a free frame(from free or victim)
+        1. if request is write
+            1. write to free frame
+        2. if read
+            1. call memory manger to read page from disk
+            2. write to free frame
+    3. update LRU(or other replace algrithm data struct)
+    4. map page_id to frame(hash insert)
+    */
+    bcb_ptr = SelectVictim();   //check free and select victim
 
     if(type==1){
         /** 
@@ -95,16 +88,52 @@ int BMgr::accessPage(int page_id, int type){
          * call Disk manager to read page, and write to buffer
          * read(page_id, bcb[bcb_ptr->frame_id])
         */
-       read_io++;
-       ;
+        dsmgr->ReadPage(page_id, &buf[bcb_ptr->frame_id]);
+        read_io++;
     }
     bcb_ptr->page_id = page_id;
 
-    replace_alg->update(bcb_ptr, from_free);
     hash_insert(bcb_ptr);
 
     return bcb_ptr->frame_id;
 }
+
+int BMgr::FixNewPage(int *page_id_ptr){
+    BCB *bcb_ptr = SelectVictim();
+    int page_id = dsmgr->NewPage();
+    *page_id_ptr = page_id;
+
+    bcb_ptr->page_id = page_id;
+    hash_insert(bcb_ptr);
+    bcb_ptr->pincount++;
+
+    return bcb_ptr->frame_id;
+}
+
+int BMgr::UnfixPage(int page_id) {
+    BCB * bcb_ptr = hash_search(page_id);
+    if(bcb_ptr==NULL){
+        fprintf(stderr, "ERROR: UnfixPage %d failed\n", page_id);
+        exit(1);
+    }
+    if(bcb_ptr->pincount==0){
+        hash_delete(bcb_ptr);
+    }else{
+        bcb_ptr->pincount--;
+    }
+    return bcb_ptr->frame_id;
+}
+
+int BMgr::NumFreeFrames() {
+    BCB * ptr = free_list;
+    int cnt = 0;
+    while(ptr!=NULL){
+        cnt ++;
+        ptr = ptr->free_next;
+    }
+    return cnt;
+}
+
 
 void BMgr::clear_buffer(){
     for(int i=0; i<DEFBUFSIZE; i++){
@@ -113,8 +142,32 @@ void BMgr::clear_buffer(){
              * call Disk manager to write back page
              * writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
             */
+           write_io++;
         }
     }
+}
+
+BCB *BMgr::SelectVictim(){
+    //free frame?
+    BCB *bcb_ptr;
+    bcb_ptr = get_free();
+    int is_free_frame = !(bcb_ptr==NULL);
+    if(bcb_ptr==NULL){  //no free frame
+        bcb_ptr = replace_alg->select_victim();     //select victim
+        if(bcb_ptr->dirty){                         //check dirty
+            /** 
+             * call Disk manager to write back page
+             * writeback(bcb_ptr->page_id, bcb[bcb_ptr->frame_id])
+            */
+           dsmgr->WritePage(bcb_ptr->page_id, &buf[bcb_ptr->frame_id]);
+           write_io++;
+           bcb_ptr->dirty=0;
+        }
+        hash_delete(bcb_ptr);   //delete original page_id to frame_id hash map
+    }
+    replace_alg->update(bcb_ptr, is_free_frame);
+
+    return bcb_ptr;
 }
 
 void BMgr::init_bcb(){
@@ -122,7 +175,7 @@ void BMgr::init_bcb(){
         buf_bcb[i].page_id = -1;
         buf_bcb[i].frame_id = i;
         buf_bcb[i].latch = 0;
-        buf_bcb[i].count = 0;
+        buf_bcb[i].pincount = 0;
         buf_bcb[i].dirty = 0;
 
         buf_bcb[i].next = NULL;
@@ -194,10 +247,18 @@ void BMgr::hash_delete(BCB *bcb_ptr){
     }
 }
 
+void BMgr::init_statistical_data(){
+    access_total = 0;
+    hit = 0;
+    write = 0;
+    write_io = read_io = 0;
+}
+
 void BMgr::print_statistical_data(){
     printf("total: %d\n", access_total);
-    printf("hit rate: %f\n", (float)hit/access_total);
-    printf("write rate: %f\n", (float)write/access_total);
+    printf("hit rate: %.3f%%\n", (float)hit/access_total*100);
+    printf("write rate: %.3f%%\n", (float)write/access_total*100);
     printf("read_io: %d\n", read_io);
     printf("write_io: %d\n", write_io);
+    printf("total_io: %d\n", read_io+write_io);
 }
