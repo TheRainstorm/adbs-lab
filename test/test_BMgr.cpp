@@ -25,7 +25,6 @@ int main(){
     }
     t += clock();
     bmgr.print_statistical_data();
-    printf("CLOCKS_PER_SEC=%d\n", CLOCKS_PER_SEC);
     printf("time elapsed=%lld, %f\n",t, (float)t/CLOCKS_PER_SEC);
 
     t = -clock();
